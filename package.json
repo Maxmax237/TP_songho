@@ -1,7 +1,16 @@
 {
-  "name": "songho-static",
+  "name": "songho-multijoueur-backend",
   "version": "1.0.0",
+  "description": "Serveur Socket.IO pour le jeu Songho",
+  "main": "server.js",
   "scripts": {
-    "start": "npx serve . -l $PORT"
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
