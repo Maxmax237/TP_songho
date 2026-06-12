@@ -1,8 +1,11 @@
 {
-  "name": "songho-multijoueur",
+  "name": "songho-backend",
   "version": "1.0.0",
-  "description": "Jeu Songho multijoueur avec téléchargement APK",
   "scripts": {
-    "start": "npx serve . -p $PORT"
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
   }
 }
