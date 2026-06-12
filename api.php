@@ -26,7 +26,7 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
+    echo json_encode(['success' => false, 'error' => 'Database connection failed: ' . $e->getMessage()]);
     exit();
 }
 
@@ -72,8 +72,8 @@ function loadGameState($pdo, $roomCode) {
     if (!$room) return null;
     
     return [
-        'boardNorth' => explode(',', $room['board_north']),
-        'boardSouth' => explode(',', $room['board_south']),
+        'boardNorth' => array_map('intval', explode(',', $room['board_north'])),
+        'boardSouth' => array_map('intval', explode(',', $room['board_south'])),
         'capturedNorth' => (int)$room['captured_north'],
         'capturedSouth' => (int)$room['captured_south'],
         'currentPlayer' => $room['current_player'],
@@ -122,17 +122,27 @@ function checkGameOver(&$state) {
         if ($southTotal === 0 && $northTotal > 0) {
             $state['capturedNorth'] += $northTotal;
             $state['boardNorth'] = array_fill(0, NB_PITS, 0);
-            $state['winner'] = 'JOUEUR 1 (haut)';
+            $state['winner'] = '🏆 JOUEUR 1 (haut) gagne ! 🏆';
         } elseif ($northTotal === 0 && $southTotal > 0) {
             $state['capturedSouth'] += $southTotal;
             $state['boardSouth'] = array_fill(0, NB_PITS, 0);
-            $state['winner'] = 'JOUEUR 2 (bas)';
+            $state['winner'] = '🏆 JOUEUR 2 (bas) gagne ! 🏆';
         } else {
-            $state['winner'] = 'Égalité';
+            $state['winner'] = '🤝 Égalité ! 🤝';
         }
         return true;
     }
     return false;
+}
+
+function getNextPosition($player, $idx) {
+    if ($player === 'south') {
+        if ($idx + 1 < NB_PITS) return ['player' => 'south', 'index' => $idx + 1];
+        else return ['player' => 'north', 'index' => 0];
+    } else {
+        if ($idx + 1 < NB_PITS) return ['player' => 'north', 'index' => $idx + 1];
+        else return ['player' => 'south', 'index' => 0];
+    }
 }
 
 // Exécuter un mouvement
@@ -168,7 +178,8 @@ function executeMove(&$state, $player, $pitIndex) {
             $pos = getNextPosition($pos['player'], $pos['index']);
         }
         
-        $state[($pos['player'] === 'north') ? 'boardNorth' : 'boardSouth'][$pos['index']]++;
+        $targetBoard = ($pos['player'] === 'north') ? 'boardNorth' : 'boardSouth';
+        $state[$targetBoard][$pos['index']]++;
         $remaining--;
         $lastPos = $pos;
     }
@@ -206,25 +217,7 @@ function executeMove(&$state, $player, $pitIndex) {
     // Vérifier fin
     checkGameOver($state);
     
-    // Vérifier que l'adversaire a encore des graines
-    $opponentBoard = ($player === 'north') ? 'boardSouth' : 'boardNorth';
-    if (array_sum($state[$opponentBoard]) === 0 && !$state['gameEnded']) {
-        $state['gameEnded'] = true;
-        $state['gameActive'] = false;
-        $state['winner'] = ($player === 'north') ? 'JOUEUR 1 (haut)' : 'JOUEUR 2 (bas)';
-    }
-    
-    return ['success' => true];
-}
-
-function getNextPosition($player, $idx) {
-    if ($player === 'south') {
-        if ($idx + 1 < NB_PITS) return ['player' => 'south', 'index' => $idx + 1];
-        else return ['player' => 'north', 'index' => 0];
-    } else {
-        if ($idx + 1 < NB_PITS) return ['player' => 'north', 'index' => $idx + 1];
-        else return ['player' => 'south', 'index' => 0];
-    }
+    return ['success' => true, 'message' => $replay ? 'Vous rejouez !' : 'Tour terminé'];
 }
 
 // ==================== TRAITEMENT DES REQUÊTES ====================
@@ -239,12 +232,13 @@ switch ($action) {
         $playerId = generatePlayerId();
         $state = getInitialState();
         
-        $stmt = $pdo->prepare("INSERT INTO game_rooms (room_code, board_north, board_south, player_north_id) VALUES (?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO game_rooms (room_code, board_north, board_south, player_north_id, current_player) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             $roomCode,
             implode(',', $state['boardNorth']),
             implode(',', $state['boardSouth']),
-            $playerId
+            $playerId,
+            'south'
         ]);
         
         $_SESSION['player_id'] = $playerId;
@@ -254,7 +248,8 @@ switch ($action) {
             'roomCode' => $roomCode,
             'playerId' => $playerId,
             'role' => 'north',
-            'state' => $state
+            'state' => $state,
+            'message' => 'Partie créée ! Partagez le code avec votre adversaire.'
         ];
         break;
         
@@ -269,7 +264,7 @@ switch ($action) {
             break;
         }
         
-        if ($room['player_south_id']) {
+        if ($room['player_south_id'] !== null) {
             $response = ['success' => false, 'error' => 'Partie pleine'];
             break;
         }
@@ -285,7 +280,8 @@ switch ($action) {
             'roomCode' => $roomCode,
             'playerId' => $playerId,
             'role' => 'south',
-            'state' => $state
+            'state' => $state,
+            'message' => 'Partie rejointe ! Attendez votre tour.'
         ];
         break;
         
@@ -304,6 +300,11 @@ switch ($action) {
         $player = $input['player'] ?? '';
         $pitIndex = (int)($input['pitIndex'] ?? -1);
         
+        if ($pitIndex < 0 || $pitIndex >= NB_PITS) {
+            $response = ['success' => false, 'error' => 'Case invalide'];
+            break;
+        }
+        
         $state = loadGameState($pdo, $roomCode);
         if (!$state) {
             $response = ['success' => false, 'error' => 'Partie introuvable'];
@@ -313,7 +314,7 @@ switch ($action) {
         $result = executeMove($state, $player, $pitIndex);
         if ($result['success']) {
             saveGameState($pdo, $roomCode, $state);
-            $response = ['success' => true, 'state' => $state];
+            $response = ['success' => true, 'state' => $state, 'message' => $result['message']];
         } else {
             $response = $result;
         }
@@ -322,13 +323,37 @@ switch ($action) {
     case 'reset_room':
         $roomCode = $input['roomCode'] ?? '';
         $state = getInitialState();
+        
+        // Conserver les joueurs
+        $stmt = $pdo->prepare("SELECT player_north_id, player_south_id FROM game_rooms WHERE room_code = ?");
+        $stmt->execute([$roomCode]);
+        $room = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         saveGameState($pdo, $roomCode, $state);
-        $response = ['success' => true, 'state' => $state];
+        
+        // Remettre current_player à south
+        $stmt = $pdo->prepare("UPDATE game_rooms SET current_player = 'south', game_active = 1, game_ended = 0, winner = NULL WHERE room_code = ?");
+        $stmt->execute([$roomCode]);
+        
+        $state['currentPlayer'] = 'south';
+        
+        $response = ['success' => true, 'state' => $state, 'message' => 'Partie réinitialisée !'];
         break;
         
     case 'quit_room':
-        // Nettoyage (optionnel)
-        $response = ['success' => true];
+        $roomCode = $input['roomCode'] ?? '';
+        $playerId = $input['playerId'] ?? null;
+        
+        if ($roomCode && $playerId) {
+            // Supprimer le joueur de la salle
+            $stmt = $pdo->prepare("UPDATE game_rooms SET player_north_id = IF(player_north_id = ?, NULL, player_north_id), player_south_id = IF(player_south_id = ?, NULL, player_south_id) WHERE room_code = ?");
+            $stmt->execute([$playerId, $playerId, $roomCode]);
+            
+            // Nettoyer les salles vides
+            $stmt = $pdo->prepare("DELETE FROM game_rooms WHERE room_code = ? AND player_north_id IS NULL AND player_south_id IS NULL");
+            $stmt->execute([$roomCode]);
+        }
+        $response = ['success' => true, 'message' => 'Vous avez quitté la partie'];
         break;
         
     default:
