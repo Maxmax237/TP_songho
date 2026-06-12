@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Songho Online - Jeu à distance</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Ajout pour le bouton de téléchargement APK */
+        .apk-download {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .apk-download:hover {
+            transform: scale(1.05);
+        }
+        .apk-download img, .apk-download:before {
+            content: "📱";
+            font-size: 20px;
+        }
+    </style>
 </head>
 <body>
 <div class="game-wrapper">
@@ -48,9 +76,11 @@
     </div>
 </div>
 
+<!-- BOUTON DE TÉLÉCHARGEMENT APK -->
+<a href="/songho.apk" download class="apk-download">
+    📱 Télécharger l'APK Songho
+</a>
+
 <script src="script.js"></script>
-    <footer>
-    IKENG HENGA FLORENT DAVID 22T2857
-</footer>
 </body>
 </html>
