@@ -1,6 +1,7 @@
 {
-  "name": "apk-downloader",
+  "name": "songho-multijoueur",
   "version": "1.0.0",
+  "description": "Jeu Songho multijoueur avec téléchargement APK",
   "scripts": {
     "start": "npx serve . -p $PORT"
   }
