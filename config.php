@@ -2,6 +2,17 @@
 /**
  * API Songho Multi-joueur pour Render.com
  */
+<?php
+// config.php pour Render.com avec PostgreSQL
+define('DB_HOST', getenv('PGHOST'));
+define('DB_NAME', getenv('PGDATABASE'));
+define('DB_USER', getenv('PGUSER'));
+define('DB_PASS', getenv('PGPASSWORD'));
+define('DB_PORT', getenv('PGPORT') ?: '5432');  // Ajoutez cette ligne
+define('GAME_VERSION', '1.0.0');
+define('NB_PITS', 6);
+define('INITIAL_SEEDS', 4);
+define('MAX_SEEDS_PER_CELL', 30);
 
 session_start();
 header('Content-Type: application/json; charset=utf-8');
