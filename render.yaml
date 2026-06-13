@@ -1,9 +1,13 @@
 services:
   - type: web
     name: songho-game
-    runtime: php
-    buildCommand: ""
-    startCommand: "php -S 0.0.0.0:10000"
+    runtime: image
+    image:
+      url: php:8.2-apache
+    buildCommand: |
+      docker-php-ext-install pdo pdo_pgsql
+      a2enmod rewrite
+    startCommand: "apache2-foreground"
     envVars:
       - key: PGHOST
         fromDatabase:
