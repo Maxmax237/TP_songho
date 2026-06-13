@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: songho-game
+    runtime: image
+    image:
+      url: php:8.2-apache
+    startCommand: "apache2-foreground"
+    envVars:
+      - key: PGHOST
+        fromDatabase:
+          name: songho-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: songho-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: songho-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: songho-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: songho-db
+          property: password
+
+databases:
+  - name: songho-db
+    plan: free
