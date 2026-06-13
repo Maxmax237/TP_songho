@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: songho-game
+    runtime: php
+    buildCommand: ""
+    startCommand: "php -S 0.0.0.0:10000"
+    envVars:
+      - key: PGHOST
+        fromDatabase:
+          name: songho-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: songho-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: songho-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: songho-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: songho-db
+          property: password
+
+databases:
+  - name: songho-db
+    plan: free
